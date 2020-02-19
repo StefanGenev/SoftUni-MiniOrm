@@ -13,8 +13,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 public class EntityManager<E> implements DbContext<E> {
     private Connection connection;
@@ -34,12 +36,24 @@ public class EntityManager<E> implements DbContext<E> {
         return doUpdate(entity, primary);
     }
 
-    public Iterable<E> find(Class<E> table) {
-        return null;
+    public Iterable<E> find(Class<E> table) throws InvocationTargetException, SQLException, InstantiationException, IllegalAccessException, NoSuchMethodException {
+        return find(table,null);
     }
 
-    public Iterable<E> find(Class<E> table, String where) {
-        return null;
+    public Iterable<E> find(Class<E> table, String where) throws SQLException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Statement statement = connection.createStatement();
+        String query = "SELECT * FROM " + table.getAnnotation(Entity.class).name() +
+                " WHERE 1 " + (where != null ? " AND " + where : "");
+        ResultSet resultSet = statement.executeQuery(query);
+
+        List<E> entities = new ArrayList<>();
+        while (resultSet.next()) {
+            E entity = table.getDeclaredConstructor().newInstance();
+            this.fillEntity(table, resultSet, entity);
+            entities.add(entity);
+        }
+
+        return entities;
     }
 
     public E findFirst(Class<E> table) throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
